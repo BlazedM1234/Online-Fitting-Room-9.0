@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Viewer</title>
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; }
+        canvas { display: block; }
+        .controls { margin: 20px; }
+        input { margin: 5px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div class="controls">
+        <label>Height: <input type="number" id="height" placeholder="Height" /></label>
+        <label>Width: <input type="number" id="width" placeholder="Width" /></label>
+        <label>Skin Color: <input type="color" id="skinColor" value="#ffffff" /></label>
+    </div>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Load your GLB model
+        const loader = new THREE.GLTFLoader();
+        let model;
+
+        loader.load('path/to/your/men-model-9.glb', function(gltf) {
+            model = gltf.scene;
+            scene.add(model);
+            camera.position.z = 5;
+            animate();
+        });
+
+        // Input listeners
+        document.getElementById('height').addEventListener('input', function() {
+            const height = parseFloat(this.value) || 1;
+            // Send height to Blender
+            fetch('/update-height', { method: 'POST', body: JSON.stringify({ height }) });
+            if (model) model.scale.y = height;  // Update locally for immediate feedback
+        });
+
+        document.getElementById('width').addEventListener('input', function() {
+            const width = parseFloat(this.value) || 1;
+            // Send width to Blender
+            fetch('/update-width', { method: 'POST', body: JSON.stringify({ width }) });
+            if (model) model.scale.x = width;  // Update locally for immediate feedback
+        });
+
+        document.getElementById('skinColor').addEventListener('input', function() {
+            const color = this.value;
+            // Send skin color to Blender
+            fetch('/update-skin-color', { method: 'POST', body: JSON.stringify({ color }) });
+            if (model) {
+                model.traverse(function(child) {
+                    if (child.isMesh) {
+                        child.material.color.set(color);  // Update locally for immediate feedback
+                    }
+                });
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
